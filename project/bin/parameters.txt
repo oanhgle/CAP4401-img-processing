@@ -1,0 +1,8 @@
+baboon.pgm baboon_bi125.pgm binarize 125
+baboon.pgm baboon_add50.pgm add 50
+baboon.pgm baboon_s200.pgm scale 2
+baboon.pgm baboon_s50.pgm scale 0.5
+baboon.pgm baboon_i1.pgm increase 50 125 40 60 90000
+baboon.pgm baboon_i2.pgm increase 50 100 0 0 40000
+baboon.pgm baboon_i3.pgm increase 50 90 100 100 250000
+baboon.pgm baboon_i4.pgm increase 100 10 50 50 90000 
