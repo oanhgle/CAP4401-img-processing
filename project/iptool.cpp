@@ -20,10 +20,20 @@
 #include "../iptools/core.h"
 #include <strings.h>
 #include <string.h>
+#include <algorithm>
 
 using namespace std;
 
 #define MAXLEN 256
+
+struct Parameter {
+  int xl;
+  int yl;
+  int xr;
+  int yr;
+  char* function;
+  vector<float> px;
+};
 
 int main (int argc, char** argv)
 {
@@ -45,48 +55,126 @@ int main (int argc, char** argv)
 		strcpy(outfile, pch);
 
 		pch = strtok(NULL, " ");
-        if (strncasecmp(pch,"add",MAXLEN)==0) {
-			/* Add Intensity */
+
+		int num_roi = atoi(pch);
+
+		// allow for up to 3 roi per image.
+		if(num_roi > 3 || num_roi < 1) continue; 
+
+		// read parameters
+		vector<Parameter> pr;
+		vector<bool> overlap;
+		vector<char *> tmp;
+		pch = strtok (NULL, " ");
+
+		int size = -1;
+		while (pch)
+		{
+			tmp.push_back(pch);
+			if(tmp.size() == 5)
+			{
+				if (strncasecmp(tmp[4],"bright",MAXLEN)==0) size = 8;
+				else if (strncasecmp(tmp[4],"visualize",MAXLEN)==0) size = 7;
+				else size = 6;
+			}
+			if(tmp.size() == size)
+			{
+				vector<char *> sub = {tmp.begin() + 5, tmp.end()}; 
+				vector<float> intsub;
+				transform(sub.begin(), sub.end(),  std::back_inserter(intsub), [&](char* x) { return atof(x);});
+				Parameter new_param = {
+					atoi(tmp[0]), 
+					atoi(tmp[1]), 
+					atoi(tmp[0]) + atoi(tmp[3]), 
+					atoi(tmp[1]) + atoi(tmp[2]),
+					tmp[4],
+					intsub
+				};
+				
+				pr.push_back(new_param);
+
+				// overlapping?
+				overlap.push_back(false);
+
+				int i, j;
+
+				i = j = pr.size() - 1;
+
+				while(--j >= 0)
+				{
+					vector<int> a = {pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr};
+					vector<int> b = {pr[j].xl, pr[j].yl, pr[j].xr, pr[j].yr};
+					auto isOverlap = [] (vector<int> a, vector<int> b){
+						return (min(a[2], b[2]) > max(a[0], b[0]) && min(a[3], b[3]) > max(a[1], b[1])); 
+					};
+					if(isOverlap(a, b))
+					{
+						overlap[j] = true;
+						overlap[i] = true;
+						printf("ROI ((%d,%d), (%d, %d)) and ((%d,%d), (%d, %d)) are overlapping. Rejected them!\n", pr[j].xl, pr[j].yl, pr[j].xr, pr[j].yr, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr);
+					}
+				}
+				tmp.clear();
+				size = -1;
+			}
 			pch = strtok (NULL, " ");
-			utility::addGrey(src,tgt,atoi(pch));
-        }
-
-        else if (strncasecmp(pch,"binarize",MAXLEN)==0) {
-			/* Thresholding */
-			pch = strtok(NULL, " ");
-			utility::binarize(src,tgt,atoi(pch));
-		}
-
-		else if (strncasecmp(pch,"scale",MAXLEN)==0) {
-			/* Image scaling */
-			pch = strtok(NULL, " ");
-			utility::scale(src,tgt,atof(pch));
 		}
 		
-		else if (strncasecmp(pch,"increase",MAXLEN)==0) {
-			/* Increase brightness/intensity of a certain area */
-			vector<int> params;
-			pch = strtok (NULL, " ");
-			while (pch)
-			{
-				params.push_back(atoi(pch));
-				pch = strtok (NULL, " ");
+		if(overlap.size() != num_roi) printf("Parameters need to match the input #roi\n");
+		
+		for(int i = num_roi-1; i >= 0; i--)
+		{
+			if(overlap[i])
+				pr.erase(pr.begin()+i);
+		}
+
+		if(pr.empty()) continue;;
+
+		// perform the processing if no overlapping
+		tgt = src; 
+
+		for(int i = 0; i < pr.size(); i++)
+		{
+			// check boundary
+			if(!utility::roi_isInbounds(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr))
+				continue;
+
+			if (strncasecmp(pr[i].function,"add",MAXLEN)==0) {
+				/* Add Intensity */
+				utility::addGrey(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, (int)pr[i].px[0]);
+        	}
+
+			else if (strncasecmp(pr[i].function,"binarize",MAXLEN)==0) {
+				/* Thresholding */
+				utility::binarize(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, (int)pr[i].px[0]);
 			}
-			if(params.size() == 5) 
-				utility::increase_brightness(src,tgt,params[0],params[1],params[2],params[3],params[4]);
-			else 
-			{
-				printf("See readme.txt for how to construct the input parameters\n");
+
+			else if (strncasecmp(pr[i].function,"scale",MAXLEN)==0) {
+				/* Image scaling */
+				utility::scale(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, pr[i].px[0]);
+			}
+
+			else if (strncasecmp(pr[i].function,"aoi",MAXLEN)==0) {
+				/* bright the area of interest (AOI) */
+				utility::aoi_bright(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, (int)pr[i].px[0]);
+			}
+
+			else if (strncasecmp(pr[i].function,"bright",MAXLEN)==0) {
+				/* Add color brightness */
+				utility::color_bright(tgt, pr[i].xl, pr[i].yl, pr[i].xr, (int)pr[i].yr, (int)pr[i].px[0], (int)pr[i].px[1], (int)pr[i].px[2]);
+			}
+
+			else if (strncasecmp(pr[i].function,"visualize",MAXLEN)==0) {
+				/* Add color visualization */
+				utility::color_vis(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, (int)pr[i].px[0], (int)pr[i].px[1]);
+			}
+
+			else {
+				printf("No function: %s\n", pch);
 				continue;
 			}
+			tgt.save(outfile);
 		}
-
-		else {
-			printf("No function: %s\n", pch);
-			continue;
-		}
-
-		tgt.save(outfile);
 	}
 	fclose(fp);
 	return 0;
