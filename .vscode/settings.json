@@ -4,6 +4,15 @@
         "iosfwd": "cpp",
         "iterator": "cpp",
         "algorithm": "cpp",
-        "iostream": "cpp"
-    }
+        "iostream": "cpp",
+        "utility": "cpp",
+        "ostream": "cpp",
+        "string": "cpp",
+        "typeinfo": "cpp",
+        "tuple": "cpp",
+        "unordered_map": "cpp",
+        "__config": "cpp",
+        "map": "cpp"
+    },
+    "C_Cpp.errorSquiggles": "enabled"
 }

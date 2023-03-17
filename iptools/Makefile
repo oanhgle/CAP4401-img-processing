@@ -12,7 +12,7 @@ INCLUDES = -I. -I/usr/local/include -Iimage/  -Iutility/ -I/usr/include/c++/4.2.
 CCFLAGS = -g
 
 # compiler
-CCC = g++
+CCC = g++ -std=c++11
 
 
 # compile flags

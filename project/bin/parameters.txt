@@ -1,15 +1,11 @@
-baboon.pgm baboon_add.pgm  3  5 5 150 200 add 50   120 210 200 200 add 100  350 350 150 150 add 120
-lena.ppm lena_add.pgm 2  15 5 200 200 add 50 300 150 300 200 add 100
-baboon.pgm baboon_bi.pgm  3  5 5 150 200 binarize 50   120 210 200 200 binarize 100  350 350 150 150 binarize 200
-baboon.pgm baboon_scale.pgm  3  5 5 150 200 scale 2   120 210 200 200 scale 0.5  350 200 220 100 scale 0.6
-lena.ppm lena_scale.ppm 2  15 5 200 200 scale 0.8  300 150 300 200 scale 2
-baboon.pgm baboon_aoi.pgm  2  50 100 300 200 aoi 100  350 350 150 150 aoi 250
-baboon.pgm baboon_aoi_color.ppm  2 50 100 300 200 aoi 100  350 350 150 150 aoi 250
-lena.ppm lena_aoi.ppm 2  15 5 200 200 aoi 50  300 150 300 200 aoi 200
-baboon.pgm baboon_br_grey.pgm  3  5 5 150 200 bright 50 -50 50   120 210 200 200 bright 20 100 100   350 350 150 150 bright -50 100 200
-baboon.pgm baboon_br_color.ppm  3  5 5 150 200 bright 50 -50 50   120 210 200 200 bright 20 100 100   350 350 150 150 bright -50 100 200
-lena.ppm lena_br.ppm 3  15 5 200 200 bright 50 -50 50   300 150 300 200 bright 20 50 100  100 250 180 180 bright -50 100 200
-baboon.pgm baboon_vis_color.ppm  1  100 100 300 200 visualize 100 50
-lena.ppm lena_vis.ppm 3  15 5 200 200 visualize 50 100   300 150 300 200 visualize 100 50  100 250 180 180 visualize 30 200
-lena.ppm output_lena.ppm 3  15 5 200 200 visualize 200 50   100 250 180 180 scale 0.3  300 150 300 200 aoi 100
-cinnamoroll.ppm out_cinnamoroll.ppm 3  0 50 200 200 bright -40 50 -100  250 50 200 200 visualize 200 50  200 310 180 150 scale 1.5
+child.pgm child_hs.pgm 3  0 0 800 500 histo  600 100 400 400 histo  650 600 250 400 histo
+slope.pgm slope_hs.pgm 2  0 0 400 400 histo  250 450 300 250 histo
+slope.pgm slope_combohisto.pgm 2  0 0 400 400 combohisto 0 255 50 100  250 450 300 250 combohisto 20 100 40 120
+child.pgm child_combohisto.pgm 1  0 0 900 1000 combohisto 20 240 50 100
+child.pgm child_combohisto-1.pgm 1  0 0 900 1000 combohisto 20 240 50 200
+pen.ppm pen_perchastretch.ppm  3  0 0 110 200 perchastretch R 20 240  0 200 200 100 perchastretch G 20 240  120 120 300 150 perchastretch B 20 240
+pen.ppm pen_rgbstretch.ppm 2 1 1 250 284 rgbstretch 20 100  1 259 230 285 rgbstretch 20 240
+slope.pgm slope_color.ppm 2  0 0 400 400 colorize 20 245 20 49  250 450 300 250 colorize 0 255 50 200
+child.pgm child_color.ppm 1  0 0 900 1000 colorize 20 240 90 150
+slope.pgm slope_multithreshold.ppm 2  0 0 300 300 multithreshold  0 350 400 500 multithreshold
+child.pgm child_multithreshold.ppm 3  0 0 800 500 multithreshold  600 100 400 400 multithreshold  620 600 300 450 multithreshold

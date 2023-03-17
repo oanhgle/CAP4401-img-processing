@@ -24,26 +24,26 @@ As a result you should get iptool in project/bin directory.
 Each function operates only in a certain ROI. There's a need to pass ROI's coordinate locations 
 as parameter to these functions.
 
-1. Add intensity: add
-Increase the intensity for a gray-level image.
+1. Histogram stretching: histo
+Histogram stretch on a single-channel image.
 
-2. Binarization: binarize
-Binarize the pixels with the threshold.
+2. Two-valued thresholding + histogram stretching: combohisto
+Perform two-valued thresholding (T1, T2 with T2 > T1) to segment a single-channel image 
+into three subsets (dark, medium, bright), then apply histogram stretching on each subset.
 
-3. Scaling: scale
-Reduce or expand the heigh and width with two scale factors.
-Scaling factor = 2: double height and width of the input image.
-Scaling factor = 0.5: half height and width of the input image.
+3. Histogram stretch on a color image: perchastretch
+Apply function histo to R,G,B components independently.
 
-4. Brighten the AOI: aoi
-Selecting center (XC, YC) within ROI, then brighten the area by V*|(i-XC)/20| if |i-XC|<21
+4. Histogram stretch on a color image: rgbstretch
+Apply function histo to R,G,B components independently.
 
-5. Color brightness: brighten
-Process each color channel: R1=R + DR, G1=G + DG, B1=B + DB.
+5. Pseudo coloring (two-valued threshold + stretch): colorize
+Perform two-valued thresholding (T1, T2 with T2 > T1) to color each channel, 
+then apply histogram stretching on each channel.
 
-6. Color visualization: visualize
-Color red if abs(V – I (i,j)) < T, otherwise color green
-
+6.  Pseudo coloring (9-valued threshold): multithreshold
+Implement 9-valued equal thresholding by dividing image intensity range into ten equal 
+intervals between Imin and Imax; then colorize using ten different hard-coded colors.
 
 *** PARAMETERS FILE ***
 
@@ -57,18 +57,22 @@ The following steps can be followed to construct the parameters:
 5. yl - intial column;
 6. Sx - total number of pixels in the x axis
 7. Sy - total number of pixels in the y axis
-4. the name of the filter. Use "add", "binarize", "scale", "aoi", "brighten", "visualize" for your filters;
+4. the name of the filter. Use "histo", "combohisto", "perchastretch", "rgbstretch", "colorize", "multithreshold" for your filters;
 4. choose one of the following option:
-	a. if you use "add", "binarize", "scale", or "aoi", you only need one more parameter which is the value 
-		for adding intensity, threshold value for binarize filter, the scaling factor for scale filter, or
-	   	the value for adding intensity within AOI.
-	b. if you use "brighten", there should be 3 more parameters: DR, DG, DB. They are the values you want to
-		add to each channel R,G,B 
-	c. if you use "visualize", there should be 2 more parameters: V and T, which represents intensity 
-		and threshold values.
+	a. "histo" or "multithreshold": no parameters required.
+	b. "rgbstretch": 
+		- requires (A,B) 
+		- A and B are the mini and maxi intensity values possible.
+	c. "perchastretch": 
+		- requires (channel_name,A,B) 
+		- A and B are the mini and maxi intensity values possible.
+	d. "combohisto" or "colorize": 
+		- requires (A,B,T1,T2) 
+		- A and B are the mini and maxi intensity values possible.
+		- T1 & T2 are the two threshold values and T1 < T2.
 
 *** Run the program: 
 $ cd project
 $ make
 $ cd bin
-
+$ ./iptool parameters.txt

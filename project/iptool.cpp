@@ -40,6 +40,7 @@ int main (int argc, char** argv)
 	image src, tgt;
 	FILE *fp;
 	char str[MAXLEN];
+	char infile[MAXLEN];
 	char outfile[MAXLEN];
 	char *pch;
 	if ((fp = fopen(argv[1],"r")) == NULL) {
@@ -50,6 +51,7 @@ int main (int argc, char** argv)
 	while(fgets(str,MAXLEN,fp) != NULL) {
 		pch = strtok(str, " ");
 		src.read(pch);
+		strcpy(infile, pch);
 
 		pch = strtok(NULL, " ");
 		strcpy(outfile, pch);
@@ -73,15 +75,24 @@ int main (int argc, char** argv)
 			tmp.push_back(pch);
 			if(tmp.size() == 5)
 			{
-				if (strncasecmp(tmp[4],"bright",MAXLEN)==0) size = 8;
-				else if (strncasecmp(tmp[4],"visualize",MAXLEN)==0) size = 7;
+				tmp[4][strcspn(tmp[4],"\n")] = '\0';
+				if (strncasecmp(tmp[4],"combohisto",MAXLEN)==0 || strncasecmp(tmp[4],"colorize",MAXLEN)==0) size = 9;
+				else if (strncasecmp(tmp[4],"bright",MAXLEN)==0 || strncasecmp(tmp[4],"perchastretch",MAXLEN)==0) size = 8;
+				else if (strncasecmp(tmp[4],"visualize",MAXLEN)==0 || strncasecmp(tmp[4],"rgbstretch",MAXLEN)==0) size = 7;
+				else if (strncasecmp(tmp[4],"histo",MAXLEN)==0 || strncasecmp(tmp[4],"multithreshold",MAXLEN)==0) size = 5;
 				else size = 6;
 			}
 			if(tmp.size() == size)
 			{
-				vector<char *> sub = {tmp.begin() + 5, tmp.end()}; 
 				vector<float> intsub;
-				transform(sub.begin(), sub.end(),  std::back_inserter(intsub), [&](char* x) { return atof(x);});
+				vector<char*> sub = {tmp.begin() + 5, tmp.end()}; 
+				transform(sub.begin(), sub.end(),  std::back_inserter(intsub), [&](char* x) { 
+					if(strncasecmp(x,"R",MAXLEN)==0) return 0.0;
+					else if (strncasecmp(x,"G",MAXLEN)==0) return 1.0;
+					else if (strncasecmp(x,"B",MAXLEN)==0) return 2.0;
+					return atof(x);
+				});
+				
 				Parameter new_param = {
 					atoi(tmp[0]), 
 					atoi(tmp[1]), 
@@ -95,7 +106,6 @@ int main (int argc, char** argv)
 
 				// overlapping?
 				overlap.push_back(false);
-
 				int i, j;
 
 				i = j = pr.size() - 1;
@@ -128,13 +138,17 @@ int main (int argc, char** argv)
 				pr.erase(pr.begin()+i);
 		}
 
-		if(pr.empty()) continue;;
+		if(pr.empty()) continue;
 
 		// perform the processing if no overlapping
 		tgt = src; 
-
 		for(int i = 0; i < pr.size(); i++)
 		{
+			string out = outfile;
+			string in = infile;
+			std::string outname, inname;
+			outname = out.substr(0, out.size()-4);
+			inname = in.substr(0, in.size()-4);
 			// check boundary
 			if(!utility::roi_isInbounds(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr))
 				continue;
@@ -167,6 +181,60 @@ int main (int argc, char** argv)
 			else if (strncasecmp(pr[i].function,"visualize",MAXLEN)==0) {
 				/* Add color visualization */
 				utility::color_vis(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, (int)pr[i].px[0], (int)pr[i].px[1]);
+			}
+
+			else if (strncasecmp(pr[i].function,"histo",MAXLEN)==0) {
+				/* Perform histogram stretch on single level */
+				string before = inname + "-h-(roi" + std::to_string(i) + ").pgm";
+				string after = outname + "-h-(roi" + std::to_string(i) + ").pgm";
+				utility::histogram(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, RED, const_cast<char*>(before.c_str()));
+				utility::histogram_stretch(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, RED, 0, 255);
+				utility::histogram(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, RED, const_cast<char*>(after.c_str()));
+			}
+
+			else if (strncasecmp(pr[i].function,"combohisto",MAXLEN)==0) {
+				/* Perform 2valued threshold + histogram stretch on single level */
+				string before = inname + "-ch-(roi" + std::to_string(i) + ").pgm";
+				string after = outname + "-ch-(roi" + std::to_string(i) + ").pgm";
+				utility::histogram(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, RED, const_cast<char*>(before.c_str()));
+				utility::thres_histo(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, (int)pr[i].px[0], (int)pr[i].px[1], (int)pr[i].px[2], (int)pr[i].px[3]);
+				utility::histogram(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, RED, const_cast<char*>(after.c_str()));
+			}
+
+			else if (strncasecmp(pr[i].function,"perchastretch",MAXLEN)==0) {
+				/* Perform histogram stretching to R,G,B components independently */
+				string before = inname + "-percs-(roi" + std::to_string(i) + ").ppm";
+				string after = outname + "-percs-(roi" + std::to_string(i) + ").ppm";
+				utility::histogram(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, (channel)pr[i].px[0], const_cast<char*>(before.c_str()));
+				utility::histogram_stretch(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, (channel)pr[i].px[0], (int)pr[i].px[1], (int)pr[i].px[2]);
+				utility::histogram(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, (channel)pr[i].px[0], const_cast<char*>(after.c_str()));
+			}
+
+			else if(strncasecmp(pr[i].function,"rgbstretch",MAXLEN)==0) {
+				/* Perform histogram stretching to R,G,B components simultaneously */
+				string before_r = inname + "-r-(roi" + std::to_string(i) + ").ppm";
+				string after_r = outname + "-r-(roi" + std::to_string(i) + ").ppm";
+				string before_g = inname + "-g-(roi" + std::to_string(i) + ").ppm";
+				string after_g = outname + "-g-roi" + std::to_string(i) + ").ppm";
+				string before_b = inname + "-b-(roi" + std::to_string(i) + ").ppm";
+				string after_b = outname + "-b-(roi" + std::to_string(i) + ").ppm";
+				utility::histogram(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, RED, const_cast<char*>(before_r.c_str()));
+				utility::histogram(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, GREEN, const_cast<char*>(before_g.c_str()));
+				utility::histogram(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, BLUE, const_cast<char*>(before_b.c_str()));
+				utility::rgb_histo_stretch(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, (int)pr[i].px[0], (int)pr[i].px[1]);
+				utility::histogram(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, RED, const_cast<char*>(after_r.c_str()));
+				utility::histogram(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, GREEN, const_cast<char*>(after_g.c_str()));
+				utility::histogram(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, BLUE, const_cast<char*>(after_b.c_str()));
+			}
+
+			else if(strncasecmp(pr[i].function,"colorize",MAXLEN)==0) {
+				/* Pseudo coloring */
+				utility::colorize(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr, (int)pr[i].px[0], (int)pr[i].px[1], (int)pr[i].px[2], (int)pr[i].px[3]);
+			}
+
+			else if(strncasecmp(pr[i].function,"multithreshold",MAXLEN)==0) {
+				/* Perform 9-valued equal thresholding + coloring */
+				utility::multithreshold(tgt, pr[i].xl, pr[i].yl, pr[i].xr, pr[i].yr);
 			}
 
 			else {
